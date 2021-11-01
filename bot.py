@@ -1,6 +1,16 @@
-import websocket, json, pprint
+import websocket, json, pprint, talib, numpy
 
 SOCKET = "wss://stream.binance.com:9443/ws/ethusdt@kline_1m"
+#La période RSI est égale à 14
+RSI_PERIOD = 14
+#Un RSI suracheté est égale à 70
+RSI_OVERBOUGHT = 70
+#Un RSI survendu est égale à 30
+RSI_OVERSOLD = 30
+#Symbole commercial
+TRADE_SYMBOL = 'ETHUSDT'
+#Montant minimal à déposer (50$ = ~ 0.013 ETH)
+TRADE_QUANTITY = 0.013
 
 #Variable globale sous forme de list vide
 closes = []
@@ -41,9 +51,9 @@ def onMessage(ws, message):
         #Obtenir un message avec l'affichage de la somme sur laquelle la bougie à clôturé.
         print('Bougie clôturé à {}'.format(close))
         #Point de clôturation le plus proche
-        closes.append(close)
+        closes.append(float(close))
         #Affichages globales des fermetures
-        print("clôturation")
+        print("clôturation :")
         #Affichages des clôturations réelles
         print(closes)
 
