@@ -1,5 +1,11 @@
 import websocket, json, pprint, talib, numpy
+import config
+from binance.client import Client
+from binance.enums import *
 
+#Type de flux Binance (ws/<symbol>@kline_<interval>).
+#Documentation en ligne : https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md
+#Catégorie : Kline/Candlestick Streams
 SOCKET = "wss://stream.binance.com:9443/ws/ethusdt@kline_1m"
 #La période RSI est égal à 14
 RSI_PERIOD = 14
@@ -17,6 +23,22 @@ closes = []
 
 #Suivi de l'état
 in_position = False
+
+#Instanciation client API binance
+client = Client(config.API_KEY, config.API_SECRET, tld='fr')
+
+#Fonction de commande Achat/Vente Binance
+def order(side, quantity, symbol, order_type = ORDER_TYPE_MARKET):
+    try:
+        print('Chargement de la commande...')
+        #Récupération des données indiquées dans les positions de surachat / survente
+        order = client.create_order(symbol = symbol, side = side, type = order_type, quantity = quantity)
+        #Affichage des informations de la création de la commande
+        print(order)
+    except Exception as e:
+        return False
+
+    return True
 
 #Message de connection à binance.
 def onOpen(ws):
@@ -56,7 +78,7 @@ def onMessage(ws, message):
         #Point de fermetures la plus proche
         closes.append(float(close))
         #Affichages globaux des fermetures.
-        print("clôturassions :")
+        print("Fermetures :")
         #Affichages des fermetures réelles.
         print(closes)
 
@@ -68,10 +90,10 @@ def onMessage(ws, message):
             #Si nous modifions la période RSI à 10, la valeur s'exécutera ici et commencera à calculer les valeurs RSI.
             #Dès que nous obtiendrons 15 fermetures, nous obtiendrons une valeur RSI, à la 16 èmes fermetures, nous obtiendrons la deuxième valeur RSI, ainsi de suite...
             rsi = talib.RSI(np_closes, RSI_PERIOD)
-            #Affichage des calculs RSI
+            #Affichage des calculs RSI.
             print("Tous les RSI calculés jusqu'à présent")
             print(rsi)
-            #Obtention du dernier RSI calculé et le définir égal à la dernière valeur de cette série
+            #Obtention du dernier RSI calculé et le définir égal à la dernière valeur de cette série.
             last_rsi = rsi[-1]
             print("Le RSI actuel est {}".format(last_rsi))
 
@@ -79,9 +101,14 @@ def onMessage(ws, message):
             if last_rsi > RSI_OVERBOUGHT:
                 #Si nous sommes en position au moment du surachat
                 if in_position:
-                    #Affichage du message de vente
+                    #Affichage du message de vente.
                     print("Surachat ! Vente d'Ethereum (ETH) !")
-                    #Mettez la logique de vente de Binance ici
+                    #Logique de vente Binance.
+                    order_succeeded = order(SIDE_SELL, TRADE_QUANTITY, TRADE_SYMBOL)
+                    #Si la commande de vente à réussi
+                    if order_succeeded:
+                        #En position false, la continuité de vente est suspendu.
+                        in_position = False
                 else:
                     print("Il est suracheté, mais nous n'en possédons pas. Rien à faire")
 
@@ -89,15 +116,19 @@ def onMessage(ws, message):
             if last_rsi < RSI_OVERSOLD:
                 #Si nous sommes en position au moment de la survente
                 if in_position:
-                    #Affichage du message de possession du RSI survendu
+                    #Affichage du message de possession du RSI survendu.
                     print("Il est survendu, mais vous le possédez déjà, rien à faire.")
                 else:
-                    #Affichage du message d'achat
+                    #Affichage du message d'achat.
                     print("Survendu ! Achat d'Ethereum (ETH) !")
-                    #Mettez la logique d'achat Binance ici
+                    #Logique d'achat Binance.
+                    order_succeeded = order(SIDE_BUY, TRADE_QUANTITY, TRADE_SYMBOL)
+                    #Si la commande d'achat à reussi
+                    if order_succeeded:
+                        #En position true, la continuité d'achat est actif, nous possédons bien l'Ethereum
+                        in_position = True
 
-
-
-
+#Création d'un nouveau client websocket via un type de flux
 ws = websocket.WebSocketApp(SOCKET, on_open=onOpen, on_close=onClose, on_message=onMessage)
+#Exécution du websocket
 ws.run_forever()
