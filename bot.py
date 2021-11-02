@@ -16,7 +16,7 @@ RSI_OVERSOLD = 30
 #Symbole commercial
 TRADE_SYMBOL = 'ETHUSDT'
 #Montant minimal à déposer (50$ = ~ 0.013 ETH)
-TRADE_QUANTITY = 0.013
+TRADE_QUANTITY = 0.001
 
 #Variable globale sous forme de list vide
 closes = []
@@ -25,7 +25,7 @@ closes = []
 in_position = False
 
 #Instanciation client API binance
-client = Client(config.API_KEY, config.API_SECRET, tld='fr')
+client = Client(config.API_KEY, config.API_SECRET)
 
 #Fonction de commande Achat/Vente Binance
 def order(side, quantity, symbol, order_type = ORDER_TYPE_MARKET):
